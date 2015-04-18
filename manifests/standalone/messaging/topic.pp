@@ -9,7 +9,7 @@ define wildfly::standalone::messaging::topic($entries = undef) {
 
   wildfly::util::cli { $title:
     content => $params,
-    path    => "/subsystem=messaging/hornetq-server=default/jms-topic=${title}"
+    path    => "/subsystem=messaging/hornetq-server=default/jms-topic=${title}" 
   }
 
 }
