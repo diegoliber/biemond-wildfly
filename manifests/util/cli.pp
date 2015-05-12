@@ -1,7 +1,7 @@
 #
 # Uses Wildfly CLI Wrapper to ensure configuration state
 #
-define wildfly::util::cli($content = undef, $path = undef, $address = $wildfly::mgmt_bind) {
+define wildfly::util::cli($content = undef, $path = undef, $address = $wildfly::public_bind) {
 
   $cleaned_content = delete_undef_values($content)
   $json_content = to_unescaped_json($cleaned_content)
