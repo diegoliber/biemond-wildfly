@@ -80,25 +80,14 @@ or you can override a paramater
 
 ## Deploy
 
-**From an URL:**
+**From a source:**
 
-    wildfly::standalone::deploy_from_url { 'http://central.maven.org/maven2/io/hawt/hawtio-web/1.4.48/hawtio-web-1.4.48.war': }
-    
-**From Nexus:**
+Source supports: http://, ftp://, file://
 
-    class { 'nexus':
-      url      => 'http://mynexus.mydomain',
-      username => 'user',
-      password => '*****'
+    wildfly::standalone::deploy { 'hawtio.war':
+     source   => 'http://central.maven.org/maven2/io/hawt/hawtio-web/1.4.48/hawtio-web-1.4.48.war',
+     checksum => '303e8fcb569a0c3d33b7c918801e5789621f6639' #sha1
     }
-
-    Class['nexus'] ->
-    wildfly::standalone::deploy_from_nexus { 'hawtio.war':
-      gav       => 'io.hawt:hawtio-web:1.4.48',
-      packaging => 'war',
-      repository => 'public'
-    }
-
 
 ## User management
 
@@ -131,10 +120,10 @@ And associate groups or roles to them (requires server restart)
 Install a JAR module from a remote file system.
 
     wildfly::config::module { 'org.postgresql':
-      file_uri     => 'http://central.maven.org/maven2/org/postgresql/postgresql/9.3-1103-jdbc4/postgresql-9.3-1103-jdbc4.jar',
+      source       => 'http://central.maven.org/maven2/org/postgresql/postgresql/9.3-1103-jdbc4/postgresql-9.3-1103-jdbc4.jar',
       dependencies => ['javax.api', 'javax.transaction.api']
     }
-    
+
 ## Datasources
 
 Setup a driver and a datasource:
@@ -155,13 +144,14 @@ Setup a driver and a datasource:
         'password' => 'postgres'
       }
     }
-    
-Alternatively, you can install a JDBC driver and module using deploy_from_url if your driver is JDBC4 compliant:
 
-    wildfly::standalone::deploy_from_url { 'http://central.maven.org/maven2/org/postgresql/postgresql/9.3-1103-jdbc4/postgresql-9.3-1103-jdbc4.jar': }
+Alternatively, you can install a JDBC driver and module using deploy if your driver is JDBC4 compliant:
+
+    wildfly::standalone::deploy { 'postgresql-9.3-1103-jdbc4.jar':
+      source => 'http://central.maven.org/maven2/org/postgresql/postgresql/9.3-1103-jdbc4/postgresql-9.3-1103-jdbc4.jar'
+    }
     ->
-    wildfly::standalone::datasources::datasource { 'Demo datasource':
-      name           => 'DemoDS',
+    wildfly::standalone::datasources::datasource { 'DemoDS':
       config         => {
         'driver-name' => 'postgresql-9.3-1103-jdbc4.jar',
         'connection-url' => 'jdbc:postgresql://localhost/postgres',
@@ -171,83 +161,16 @@ Alternatively, you can install a JDBC driver and module using deploy_from_url if
       }
     }
 
-Datasource configuration uses a hash with elements that match JBoss-CLI datasource add elements name, i.e.:
-
-    allocation-retry-wait-millis
-    allocation-retry
-    allow-multiple-users
-    background-validation-millis
-    background-validation
-    blocking-timeout-wait-millis
-    capacity-decrementer-class
-    capacity-decrementer-properties
-    capacity-incrementer-class
-    capacity-incrementer-properties
-    check-valid-connection-sql
-    connection-listener-class
-    connection-listener-property
-    connection-properties
-    connection-url
-    datasource-class
-    driver-class
-    driver-name
-    enabled
-    exception-sorter-class-name
-    exception-sorter-properties
-    flush-strategy
-    idle-timeout-minutes
-    initial-pool-size
-    jndi-name
-    jta
-    max-pool-size
-    min-pool-size
-    new-connection-sql
-    password
-    pool-prefill
-    pool-use-strict-min
-    prepared-statements-cache-size
-    query-timeout
-    reauth-plugin-class-name
-    reauth-plugin-properties
-    security-domain
-    set-tx-query-timeout
-    share-prepared-statements
-    spy
-    stale-connection-checker-class-name
-    stale-connection-checker-properties
-    track-statements
-    transaction-isolation
-    url-delimiter
-    url-selector-strategy-class-name
-    use-ccm
-    use-fast-fail
-    use-java-context
-    use-try-lock
-    user-name
-    valid-connection-checker-class-name
-    valid-connection-checker-properties
-    validate-on-match
-
-
-More info here: https://docs.jboss.org/author/display/WFLY8/DataSource+configuration
+Datasource configuration uses a hash with elements that match JBoss-CLI datasource add elements name. More info here: https://docs.jboss.org/author/display/WFLY8/DataSource+configuration
 
 ## HTTPS/SSL
 
-    wildfly::standalone::web::connector { 'HTTPS':
-      name           => 'https',
-      scheme         => 'https',
-      protocol       => 'HTTP/1.1',
-      socket_binding => 'https',
-      enable_lookups => false,
-      secure         => true
-    }
-    ->
-    wildfly::standalone::web::ssl { 'SSL':
-      connector            => 'https',
-      name                 => 'ssl',
-      password             => 'changeit',
-      key_alias            => 'demo',
-      certificate_key_file => '/opt/identitystore.jks'
+    wildfly::standalone::undertow::https { 'https':
+      socket_binding    => 'https',
+      keystore_path     => '/vagrant/identitystore.jks',
+      keystore_password => 'changeit',
+      key_alias         => 'demo',
+      key_password      => 'changeit'
     }
 
 **Identity Store sample Configuration:**
@@ -284,6 +207,15 @@ More info here: https://docs.jboss.org/author/display/WFLY8/DataSource+configura
       password    => 'changeit',
     }
 
+## Server Reload
+
+Some configurations like SSL and modcluster requires a server reload, it can be achieved with the following define:
+
+    wildfly::util::exec_cli { 'Reload if necessary':
+      command => 'reload',
+      onlyif  => '(result == reload-required) of read-attribute server-state'
+    }
+
 ## Messaging (Only for full profiles)
 
     wildfly::standalone::messaging::queue { 'DemoQueue':
@@ -307,10 +239,42 @@ More info here: https://docs.jboss.org/author/display/WFLY8/DataSource+configura
 
 ## Instructions for Developers
 
-There are two abstractions built on top of JBoss-CLI:
+This module is based on three custom types:
 
-* (1) wildfly::util::exec_cli which is built on top of exec
+    wildfly_cli { 'Enable ExampleDS'
+      command => '/subsystem=datasources/data-source=ExampleDS:enable',
+      unless  => '(result == true) of /subsystem=datasources/data-source=ExampleDS:read-attribute(name=enabled)'
+    }
 
-* (2) wildfly::util::cli which is built on top of: https://github.com/jairojunior/wildfly-cli-wrapper
+    wildfly_resource { '/subsystem=datasources/data-source=ExampleDS':
+      state => {
+               'driver-name' => 'postgresql',
+               'connection-url' => 'jdbc:postgresql://localhost/example',
+               'jndi-name' => 'java:jboss/datasources/ExampleDS',
+               'user-name' => 'postgres',
+               'password' => 'postgres'
+               }
+    }
 
-Check wildfly::standalone::datasources::datasource to learn how to use them to build anything that is possible using JBoss-CLI
+    wildfly_deploy { 'sample.war':
+      source => 'file:/vagrant/sample.war'
+    }
+
+They all require a management username, password, host and port params, as it uses Wildfly HTTP API. *Host defaults to 127.0.0.1 and port to 9990*
+
+You can do virtually any Wildfly configuration using these custom types. Also this modules provides some defines in wildfly::standalone namespace which are built on top of these custom types. They are intended to enforce good practices, syntax sugar or serve as examples.
+
+## Testing
+
+    gem install bundler --no-rdoc --no-ri
+    bundle install --without development
+    gem update --system 2.1.11
+
+    bundle exec rake syntax
+    bundle exec rake lint
+    bundle exec rubocop
+
+    bundle exec rake spec
+    bundle exec rspec spec/acceptance # default centos-66-x64
+    BEAKER_set=centos-70-x64 bundle exec rspec spec/acceptance
+    BEAKER_set=debian-78-x64 bundle exec rspec spec/acceptance

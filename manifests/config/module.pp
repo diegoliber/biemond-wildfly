@@ -1,19 +1,11 @@
 #
 # Module installation
 #
-define wildfly::config::module($file_uri = undef, $dependencies = []) {
+define wildfly::config::module($source = undef, $dependencies = []) {
 
-  $file_name = file_name_from_url($file_uri)
+  require jboss::install
 
-  wget::fetch { "Downloading module ${title}":
-    source      => $file_uri,
-    destination => "/opt/${file_name}",
-    cache_dir   => '/var/cache/wget',
-    cache_file  => $file_name,
-    notify      => Exec["Create Parent Directories: ${title}"]
-  }
-
-  $namespace_path = regsubst($title, '[.]', '/', 'G')
+  $namespace_path = regsubst($name, '[.]', '/', 'G')
 
   File {
     owner => $wildfly::user,
@@ -22,7 +14,7 @@ define wildfly::config::module($file_uri = undef, $dependencies = []) {
 
   $dir_path = "${wildfly::dirname}/modules/system/layers/base/${namespace_path}/main"
 
-  exec { "Create Parent Directories: ${title}":
+  exec { "Create Parent Directories: ${name}":
     path    => ['/bin','/usr/bin', '/sbin'],
     command => "/bin/mkdir -p ${dir_path}",
     unless  => "test -d ${dir_path}",
@@ -33,9 +25,16 @@ define wildfly::config::module($file_uri = undef, $dependencies = []) {
     ensure  => directory,
   }
 
+  $file_name = inline_template('<%= File.basename(URI::parse(@source).path) %>')
+
+  archive { "${dir_path}/${file_name}":
+    source        => $source,
+  }
+  ->
   file { "${dir_path}/${file_name}":
-    ensure => file,
-    source => "/opt/${file_name}"
+    owner => $::wildfly::user,
+    group => $::wildfly::group,
+    mode  => '0755'
   }
 
   file { "${dir_path}/module.xml":

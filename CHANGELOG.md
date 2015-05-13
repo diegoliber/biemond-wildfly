@@ -1,5 +1,21 @@
 # History
 
+## 0.3.3
+- Beaker unit tests for CentOS 6.6, 7.0 and Debian 7
+- fix debian wildlfy configuration file /etc/default/wildfly
+
+## 0.3.2
+- More improvements
+
+## 0.3.1
+- Code quality improvement and support for onlyif in wildfly_cli
+
+## 0.3.0
+- Introducing custom types/providers in replacement of cli-wrapper and jboss-cli.sh. These custom types/providers use HTTP API instead of JBoss-CLI. It maks it 5-10x faster and easier to maintain. More info here: cpitman/puppet-jboss_admin#68
+- Using archive in replacement of wget cause it's faster and incredible simple.
+- Removing nexus deployment support since cescoffier/puppet-nexus is not in forge and not being active developed, I'll try to work on a PR for archive (some sort of archive::nexus) and have a single define for deployment that accepts multiple formats of deployment.
+- Users still can download from Nexus outside deploy and pass file URL as a parameter.
+
 ## 0.2.4
 - Debian fix so wildfly-init-debian.sh will be used instead of redhat
 
