@@ -1,10 +1,11 @@
 #
 # Configures modcluster subsystem
 #
-define wildfly::standalone::modcluster::config($advertise_socket = 'modcluster', $connector = 'ajp', $type = 'busyness', $balancer = undef, $load_balancing_group = undef, $proxy_list = undef, $proxy_url = undef) {
+define wildfly::standalone::modcluster::config($advertise_socket = 'modcluster', $advertise = 'true', $connector = 'ajp', $type = 'busyness', $balancer = undef, $load_balancing_group = undef, $proxy_list = undef, $proxy_url = undef) {
 
   $config = {
     'advertise-socket' => $advertise_socket,
+    'advertise' => $advertise,
     'connector' => $connector,
     'balancer' => $balancer,
     'load-balancing-group' => $load_balancing_group,
